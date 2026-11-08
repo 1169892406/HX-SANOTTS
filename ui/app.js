@@ -28,9 +28,20 @@
   var port = null;
   var pluginId = '';
   var pending = new Map();
-  var nextId = 1;
+  var seq = 0;
   var lastWav = null;
   var audioCtx = null;
+
+  /**
+   * 只读探针：给浏览器闸门断言"WebAudio 真的拿到了这一段音频"。
+   *
+   * 为什么需要它：`AudioBufferSourceNode.start()` 是**无声**的（声音进扬声器，
+   * 不进 DOM），Playwright 读不到任何证据。没有探针时，"播出来了"只能靠 hint
+   * 文案 —— 而那恰好是最容易"文案写了但根本没播"的地方。探针只记两个数：
+   * AudioContext 的采样率与最后一次 AudioBuffer 的时长。
+   */
+  var probe = { sampleRate: 0, lastBufferDuration: 0 };
+  window.__sanottsProbe = function () { return probe; };
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -41,10 +52,28 @@
 
   // ---------- 端口与 RPC ----------
 
+  /**
+   * 请求 id 生成器。
+   *
+   * # 为什么必须是**字符串**（照 HXCS 的口径）
+   *
+   * 宿主侧 `parsePluginUiMessage` 的判据是 `typeof frame.id !== 'string'` ⇒ 直接按
+   * bad-id 丢弃整帧，**而且不回错误帧**（它认为那是坏帧，不是请求）。用数字 id 的
+   * 后果是界面完全不工作：握手成功、配置页一片"—"、点按钮永远"合成中…"，
+   * 而浏览器控制台一声不响 —— 因为丢掉是静默的。这与 SEC-M2 无关，纯粹是形状不对。
+   *
+   * 前缀 `ui-` + 时间基 + 单调序号：同一毫秒内多次调用也不会撞 id（宿主按 id 对账，
+   * 重复 id 会被拒）。
+   */
+  function nextId() {
+    seq += 1;
+    return 'ui-' + Date.now().toString(36) + '-' + seq.toString(36);
+  }
+
   function rpc(op, payload) {
     return new Promise(function (resolve, reject) {
       if (!port) { reject(new Error('与平台的通道尚未建立')); return; }
-      var id = nextId++;
+      var id = nextId();
       var timer = setTimeout(function () {
         pending.delete(id);
         reject(new Error('宿主没有在 ' + Math.round(RPC_TIMEOUT_MS / 1000) + ' 秒内应答'));
@@ -258,6 +287,8 @@
     src.buffer = buffer;
     src.connect(audioCtx.destination);
     src.start();
+    probe.lastBufferDuration = buffer.duration;
+    probe.sampleRate = audioCtx.sampleRate;
     return buffer.duration;
   }
 

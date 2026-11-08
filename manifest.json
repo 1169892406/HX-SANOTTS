@@ -67,10 +67,10 @@
       "max_chars": {
         "type": "integer",
         "minimum": 1,
-        "maximum": 400,
-        "default": 200,
+        "maximum": 108,
+        "default": 100,
         "title": "单次播报字数上限",
-        "description": "一句话太长时先拆分再播：合成是一次性的（不是流式），长文本会让等待时间线性变长。超过这个字数 speak 会明确报错并提示拆分，而不是静默截断。"
+        "description": "单次播报字数上限。**模型能力是硬上限**：一次最多 432 个音素 id，中文每字 4 个（声母+韵母+声调+1 个 PAD），所以引擎单次最多约 108 字；配置只能在这个数以下收窄（写大了会按 108 生效，status 会如实回报 max_chars_effective / max_chars_engine）。超过上限时 speak 明确报错并提示拆分，不会静默截断。"
       }
     }
   },

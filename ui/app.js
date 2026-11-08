@@ -77,6 +77,7 @@
     // 主动读一次配置：宿主可能在本页脚本就绪前就给过 host-ready，
     // 两条路都能到，不会因为时序把界面卡在"加载中"。
     boot();
+    startHeightReporting();
   }
 
   window.addEventListener('message', function (ev) {
@@ -88,6 +89,48 @@
     pluginId = data.plugin_id || '';
     attachPort(ev.ports[0]);
   });
+
+  // ---------- 内容高度上报 ----------
+  //
+  // # 为什么必须由本页报（而不是平台自己量）
+  //
+  // iframe 是 opaque origin（sandbox 只给 allow-scripts），平台**读不到**它的
+  // scrollHeight —— 跨源隔离的必然结果，不是实现没做。不报的话只能给固定高度，
+  // 内容超出就在 iframe 内部滚，于是页面上出现"外层一条 + 内层一条"的双滚动条。
+  //
+  // 本页把实际内容高度经协议 op `plugin.ui.resize` 报给宿主，宿主把 iframe 高度
+  // 设成它 —— 滚动交回平台页，与平台自己的页面一致。
+  //
+  // 去抖 150ms，且只在**整数像素**变化时发：子像素抖动会让宿主每帧重设高度。
+  // 上报失败静默：这是体验优化，通道未就绪时刷错误只会误导用户。
+  var lastHeight = 0;
+  var heightTimer = null;
+
+  function reportHeight() {
+    var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+    if (!(h > 0)) { return; }
+    if (Math.abs(h - lastHeight) < 1) { return; }
+    lastHeight = h;
+    rpc('plugin.ui.resize', { height: h }).catch(function () {});
+  }
+
+  function scheduleHeight() {
+    if (heightTimer) { clearTimeout(heightTimer); }
+    heightTimer = setTimeout(reportHeight, 150);
+  }
+
+  function startHeightReporting() {
+    reportHeight();
+    if (typeof ResizeObserver !== 'function') {
+      window.addEventListener('resize', scheduleHeight);
+      return;
+    }
+    var ro = new ResizeObserver(scheduleHeight);
+    ro.observe(document.documentElement);
+    ro.observe(document.body);
+    var main = document.querySelector('main');
+    if (main) { ro.observe(main); }   // 试听/状态区是异步填充的，高度会变
+  }
 
   // ---------- 页面逻辑 ----------
 
@@ -132,6 +175,7 @@
         $('s-hash').textContent = (v.weights_sha256 || '').slice(0, 16) + '…';
         $('s-hash').title = v.weights_sha256 || '';
       }
+      scheduleHeight();
     }).catch(function (err) {
       $('engine-pill').textContent = '状态不可用';
       $('engine-pill').dataset.kind = 'bad';
@@ -227,6 +271,7 @@
     callTool('speak', { text: text, speed: Number($('speed').value) })
       .then(function (first) {
         $('speak-metrics').hidden = false;
+      scheduleHeight();
         $('m-duration').textContent = (first.duration_ms / 1000).toFixed(2) + ' 秒';
         $('m-synth').textContent = (first.synth_ms / 1000).toFixed(2) + ' 秒';
         $('m-rtf').textContent = String(first.rtf);
@@ -236,6 +281,7 @@
           $('download').disabled = false;
           var duration = playWav(wav);
           setHint(hint, '已播放 ' + duration.toFixed(2) + ' 秒（总耗时 ' + fmtMs(Date.now() - started) + '）', 'ok');
+          scheduleHeight();
         });
       })
       .catch(function (err) {

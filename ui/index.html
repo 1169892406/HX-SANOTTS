@@ -46,8 +46,8 @@
       </div>
       <div class="field">
         <label class="lbl" for="max-chars">单次播报字数上限</label>
-        <input id="max-chars" type="number" min="1" max="400" step="1" value="200" />
-        <p class="tip">合成不是流式的：越长的句子等待越久。超过上限时会明确报错并提示拆分，不会静默截断。</p>
+        <input id="max-chars" type="number" min="1" max="108" step="1" value="100" />
+        <p class="tip">上限 108 字来自模型本身（一次最多 432 个音素 id，中文每字 4 个）。合成不是流式的：越长的句子等待越久；超过上限会明确报错并提示拆分，不会静默截断。</p>
       </div>
       <div class="row">
         <button id="save" class="primary" type="button">保存配置</button>

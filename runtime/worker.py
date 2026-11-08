@@ -51,6 +51,21 @@ VERSION = "1.0.0"
 CHUNK_BYTES = 48 * 1024
 KEEP_UTTERANCES = 4
 
+# 模型一次能吃的音素 id 上限（语音包里 duration config 的 max_tokens=432）。
+#
+# ## 为什么字数上限必须由它推出来（2026-11-08 实测）
+#
+# 中文每个音节占 4 个 id（声母 + 韵母 + 声调 + 一个 PAD），所以 432 个 id 只够
+# **约 108 个汉字**。原先 manifest 把 max_chars 默认写成 200、上限 400，于是
+# 300 字的输入顺利通过字数校验，然后在 C 引擎里报
+# 「音素 id 过多：1202 > max_tokens 432」—— 用户看到的是一条内部错误，
+# 而不是"这段话太长，请拆成两句"。
+#
+# 正确的分工：模型能力是硬上限（不可配），配置只能在它下面收窄。
+MAX_TOKENS = 432
+IDS_PER_HAN = 4
+ENGINE_CHAR_CAP = MAX_TOKENS // IDS_PER_HAN   # 108
+
 
 def _log(msg: str) -> None:
     """日志走 stderr：stdout 是协议通道，写一个字节都会破坏 JSON lines。"""
@@ -237,17 +252,38 @@ class Worker:
             "cache": {"utterances": len(self.utterances), "keep": KEEP_UTTERANCES},
             "stats": dict(self.engine.stats),
             "lexicon": zh.lexicon_stats(),
+            # 生效的字数上限 = min(配置, 模型能力)：两者都要报出来，
+            # 否则用户改了配置却看不到"其实被模型压着"。
+            "max_chars_effective": self._char_cap(),
+            "max_chars_config": self.config.get("max_chars"),
+            "max_chars_engine": ENGINE_CHAR_CAP,
         }
+
+    def _char_cap(self) -> int:
+        """生效的单次播报字数上限。模型能力是硬上限，配置只能在它下面收窄。"""
+        try:
+            configured = int(self.config.get("max_chars") or ENGINE_CHAR_CAP)
+        except (TypeError, ValueError):
+            configured = ENGINE_CHAR_CAP
+        if configured <= 0:
+            configured = ENGINE_CHAR_CAP
+        return min(configured, ENGINE_CHAR_CAP)
 
     def tool_speak(self, req: dict) -> dict:
         text = str(req.get("text") or "").strip()
         if not text:
             raise ToolError("PLUGIN_INVALID_ARGS", "text 不能为空")
-        max_chars = int(self.config.get("max_chars") or 400)
+        max_chars = self._char_cap()
         if len(text) > max_chars:
+            # 文案里要同时给出**这一次**的上限与"为什么是这个数"：用户看到
+            # 「上限 108 字」时该知道这不是哪个人随手定的，而是模型一次能吃的
+            # 音素预算（432 个 id ÷ 每字 4 个）。
+            hint = ""
+            if max_chars < int(self.config.get("max_chars") or max_chars):
+                hint = f"（配置里写的是 {self.config.get('max_chars')} 字，但模型单次最多约 {ENGINE_CHAR_CAP} 字，以小的为准）"
             raise ToolError(
                 "PLUGIN_INVALID_ARGS",
-                f"文本 {len(text)} 字超过上限 {max_chars} 字：播报请按句拆分后再调用",
+                f"文本 {len(text)} 字超过上限 {max_chars} 字{hint}：播报请按句拆分后再调用",
             )
         speed = float(req.get("speed") or self.config.get("speed") or 1.0)
         speed = max(0.5, min(2.0, speed))

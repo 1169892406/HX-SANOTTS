@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>本地播报 · sanoTTS</title>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="hd">
+    <div class="hd-t">
+      <h1>本地播报 · sanoTTS</h1>
+      <p class="hd-s">句子在本机合成，不联网、不上传文本</p>
+    </div>
+    <span class="pill" id="engine-pill">引擎检查中…</span>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>试听</h2>
+      <label class="lbl" for="text">要念的话</label>
+      <textarea id="text" rows="3" maxlength="400" placeholder="例如：客厅的灯已经打开了。">你好，欢迎回家。今天天气不错。</textarea>
+      <div class="row">
+        <button id="play" class="primary" type="button">合成并播放</button>
+        <button id="download" type="button" disabled>保存 WAV</button>
+        <span class="hint" id="speak-hint"></span>
+      </div>
+      <dl class="kv" id="speak-metrics" hidden>
+        <div><dt>时长</dt><dd id="m-duration">—</dd></div>
+        <div><dt>合成耗时</dt><dd id="m-synth">—</dd></div>
+        <div><dt>实时率 RTF</dt><dd id="m-rtf">—</dd></div>
+        <div><dt>音素 / 帧</dt><dd id="m-phonemes">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>配置</h2>
+      <div class="field">
+        <label class="lbl" for="voice">音色</label>
+        <select id="voice"><option value="zh">标准普通话（小雅）</option></select>
+        <p class="tip">随包只带一条中文语音包；换音色要换语音包（见 README）。</p>
+      </div>
+      <div class="field">
+        <label class="lbl" for="speed">语速 <span class="tag" id="speed-val">1.00×</span></label>
+        <input id="speed" type="range" min="0.5" max="2" step="0.05" value="1" />
+      </div>
+      <div class="field">
+        <label class="lbl" for="max-chars">单次播报字数上限</label>
+        <input id="max-chars" type="number" min="1" max="400" step="1" value="200" />
+        <p class="tip">合成不是流式的：越长的句子等待越久。超过上限时会明确报错并提示拆分，不会静默截断。</p>
+      </div>
+      <div class="row">
+        <button id="save" class="primary" type="button">保存配置</button>
+        <span class="hint" id="save-hint"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>引擎状态</h2>
+      <dl class="kv" id="status" hidden>
+        <div><dt>推理库</dt><dd id="s-engine">—</dd></div>
+        <div><dt>采样率</dt><dd id="s-sr">—</dd></div>
+        <div><dt>词表</dt><dd id="s-lexicon">—</dd></div>
+        <div><dt>语音包摘要</dt><dd class="mono" id="s-hash">—</dd></div>
+        <div><dt>最近一次</dt><dd id="s-last">—</dd></div>
+      </dl>
+      <p class="tip" id="status-tip">正在读取…</p>
+    </section>
+
+    <p class="foot">
+      语音权重来自 <span class="mono">ampixa/sanoTTS</span>（GPL-3.0，随包分发）；
+      推理内核与本页是 MIT。全部离线运行，不包含任何网络请求。
+    </p>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

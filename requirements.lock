@@ -1,0 +1,8 @@
+# 本插件**没有任何第三方 Python 依赖**，所以这份锁是空的。
+#
+# 为什么还要这个文件：平台的 .hpkg 规范要求 python 插件必须有 requirements.lock
+# （每行 name==version --hash=sha256:…，平台会逐行校验），空文件是合法形态。
+#
+# 推理不走 pip：sanoTTS 的 numpy 实现要 16.5 MB 的 wheel、解包 951 个文件
+# （.hpkg 单包 32 MiB / 256 文件），而且实测 RTF ≈ 3 —— 所以推理内核是
+# runtime/sanotts.c，随包分发预编译 .so，宿主侧不编译、不装任何东西。

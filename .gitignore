@@ -1,0 +1,3 @@
+build/*.hpkg
+__pycache__/
+*.pyc

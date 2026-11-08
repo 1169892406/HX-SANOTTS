@@ -1,0 +1,138 @@
+/* 本地播报（sanoTTS）配置页样式。
+ *
+ * 约束：脚本被 CSP 限成 `script-src 'self'`（无内联、无 eval），样式则放行
+ * `style-src 'self' 'unsafe-inline'`。这里仍然只写外部样式表 —— 插件页要在
+ * 平台的深色/浅色两种主题下都可读，颜色全部用 CSS 变量收敛在一处。 */
+
+:root {
+  --bg: #0f1115;
+  --card: #171a21;
+  --line: #262b35;
+  --text: #e7e9ee;
+  --muted: #9aa3b2;
+  --brand: #4f9cf9;
+  --ok: #35c08f;
+  --bad: #f06a6a;
+  --radius: 12px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --line: #e3e6ec;
+    --text: #1b1f27;
+    --muted: #667085;
+    --brand: #1f6feb;
+    --ok: #14875f;
+    --bad: #c8383f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 20px 18px 28px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.6 "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+}
+
+.hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hd h1 { font-size: 19px; margin: 0 0 2px; letter-spacing: .2px; }
+.hd-s { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+.pill {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pill[data-kind="ok"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.pill[data-kind="bad"] { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+.lbl { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+
+textarea, select, input[type="number"] {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font: inherit;
+  resize: vertical;
+}
+
+textarea:focus, select:focus, input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+input[type="range"] { width: 100%; accent-color: var(--brand); }
+
+.row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+button {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--brand); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.hint { font-size: 12.5px; color: var(--muted); }
+.hint[data-kind="ok"] { color: var(--ok); }
+.hint[data-kind="bad"] { color: var(--bad); }
+
+.field { margin-bottom: 14px; }
+.tip { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  color: var(--brand);
+  font-size: 11.5px;
+}
+
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0 0; }
+.kv > div { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.kv dt { font-size: 11.5px; color: var(--muted); margin-bottom: 2px; }
+.kv dd { margin: 0; font-size: 13px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+.foot { color: var(--muted); font-size: 11.5px; margin: 6px 2px 0; }

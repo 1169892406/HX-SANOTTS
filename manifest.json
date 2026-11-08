@@ -1,0 +1,87 @@
+{
+  "schema_version": 2,
+  "api_version": "2",
+  "plugin_id": "hx.sanotts",
+  "name": "本地播报 · sanoTTS",
+  "version": "1.0.0",
+  "type": "service_integration",
+  "runtime": "python",
+  "publisher": {
+    "id": "hx-community",
+    "display_name": "HX Community",
+    "homepage": "https://github.com/1169892406/HX-SANOTTS"
+  },
+  "entry": {
+    "python": "runtime/worker.py",
+    "ui": "ui/index.html"
+  },
+  "description": "本地中文语音播报：把一句话在本机合成成 WAV，完全离线、不联网、不上传文本。引擎是 sanoTTS 的 zh_CN 语音包（1.55M 参数，piperlite 图），推理用插件自带的 C 内核（无 numpy、无 Python 依赖），音色为标准普通话「小雅」。工具：speak（文本→WAV，分块取回）、audio_chunk、voices、status；插件自带配置页可直接试听。",
+  "homepage": "https://github.com/1169892406/HX-SANOTTS",
+  "changelog": "1.0.0 首个版本：把 sanoTTS 的中文语音包接进 HOMEX。推理是自带的 C 移植（runtime/sanotts.c，逐条对照 pypkg/sanotts/models.py，与 numpy 参考实现逐样本相关 1.000000），因此插件不需要 numpy、不需要联网、不需要 espeak；文本前端是 sanoTTS 的中文 pinyin 前端（runtime/sanotts_zh.py，含 pypinyin 词表与教师读音/变调修正）。音频按 48 KiB 分块经 audio_chunk 取回，因为宿主单次应答有量级限制。语音权重来自上游 ampixa/sanoTTS（GPL-3.0），随包分发，SHA-256 在 voices/status 里可核对。",
+  "permissions": [
+    "config.read"
+  ],
+  "provides": {
+    "tools": [
+      {
+        "name": "speak",
+        "risk": "medium",
+        "description": "文本→WAV（分块返回）"
+      },
+      {
+        "name": "audio_chunk",
+        "description": "取回第 N 块音频"
+      },
+      {
+        "name": "voices",
+        "description": "语音包清单与权重摘要"
+      },
+      {
+        "name": "status",
+        "description": "引擎就绪、词表规模与上次合成耗时"
+      }
+    ]
+  },
+  "config_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "voice": {
+        "type": "string",
+        "enum": [
+          "zh"
+        ],
+        "default": "zh",
+        "title": "音色",
+        "description": "播报音色。当前随包带一条中文语音包 zh（标准普通话，sanoTTS zh_CN-xiao_ya-medium，22050 Hz）。换音色需要换语音包而不是改这一格，所以它是单选而不是下拉。"
+      },
+      "speed": {
+        "type": "number",
+        "minimum": 0.5,
+        "maximum": 2.0,
+        "default": 1.0,
+        "title": "语速",
+        "description": "语速倍率（1.0 = 模型原生）。0.5 以下会拖成机械音、2.0 以上开始吞音，区间与上游 duration length_scale 的可用范围一致。"
+      },
+      "max_chars": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 400,
+        "default": 200,
+        "title": "单次播报字数上限",
+        "description": "一句话太长时先拆分再播：合成是一次性的（不是流式），长文本会让等待时间线性变长。超过这个字数 speak 会明确报错并提示拆分，而不是静默截断。"
+      }
+    }
+  },
+  "limits": {
+    "max_memory_mb": 256,
+    "execution_timeout_ms": 60000,
+    "max_storage_kb": 64
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "hx-community"
+  },
+  "min_api_version": "2"
+}
